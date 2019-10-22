@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Bradley Olson - GNU General Public License v3.0
 
 #include "InexorableHorde.h"
 #include "Modules/ModuleManager.h"

@@ -18,6 +18,7 @@ ASCharacter::ASCharacter()
 	SpringArmComp->SetupAttachment(RootComponent);
 
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetMovementComponent()->GetNavAgentPropertiesRef().bCanJump = true;
 
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(FName("CameraComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
@@ -63,6 +64,8 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASCharacter::BeginCrouch);
 
 	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::EndCrouch);
+
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 }
 
 void ASCharacter::MoveForward(float Value)

@@ -3,6 +3,7 @@
 
 #include "SWeapon.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -21,6 +22,32 @@ void ASWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+// Ray traces to find targets hit by weapon and delivers damage to them
+void ASWeapon::Fire() {
+	// Trace from center of camera crosshair
+
+	AActor* MyOwner = GetOwner();
+	if (MyOwner) {
+		FVector EyeLocation;
+		FRotator EyeRotation;
+		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+
+		FVector TraceEnd = EyeLocation + EyeRotation.Vector() * 10000;
+
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(MyOwner);
+		QueryParams.AddIgnoredActor(this);
+		QueryParams.bTraceComplex = true;
+
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, ECC_Visibility, QueryParams)) {
+			// Blocking hit! Process damage
+
+			DrawDebugLine(GetWorld(), EyeLocation, TraceEnd, FColor::White, false, 1.0f, 0, 1.0f);
+		}
+	}
 }
 
 // Called every frame

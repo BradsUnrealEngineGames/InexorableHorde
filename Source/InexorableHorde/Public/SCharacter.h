@@ -44,4 +44,7 @@ private:
 
 	// Moves character right/left depending on value
 	void MoveRight(float Value);
+
+public:
+	virtual FVector GetPawnViewLocation() const override;
 };

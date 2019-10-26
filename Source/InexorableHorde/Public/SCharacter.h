@@ -8,6 +8,7 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class ASWeapon;
 
 UCLASS()
 class INEXORABLEHORDE_API ASCharacter : public ACharacter
@@ -23,14 +24,32 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UCameraComponent* CameraComp;
+	UCameraComponent* CameraComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	USpringArmComponent* SpringArmComp;
+	USpringArmComponent* SpringArmComp = nullptr;
 
 	void BeginCrouch();
 
 	void EndCrouch();
+
+	bool bWantsToZoom;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera")
+	float ZoomedFOV;
+
+	float DefaultFOV;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	ASWeapon* Weapon = nullptr;
+
+	void Fire();
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<ASWeapon> StarterWeaponClass;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
+	FName WeaponAttachSocketName;
 
 public:	
 	// Called every frame
@@ -47,4 +66,14 @@ private:
 
 public:
 	virtual FVector GetPawnViewLocation() const override;
+
+private:
+	// Moves camera view to reflect aiming down sight
+	void BeginZoom();
+
+	// Returns camera to broad, non-aimed, FOV
+	void EndZoom();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera", meta = (ClampMin = 0.1, ClampMax = 100))
+	float ZoomInterpSpeed;
 };

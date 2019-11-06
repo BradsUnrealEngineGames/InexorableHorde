@@ -12,6 +12,7 @@
 #include "GameFramework/PlayerController.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "InexorableHorde.h"
+#include "TimerManager.h"
 
 static int32 DebugWeaponDrawing = 0;
 FAutoConsoleVariableRef CVARDebugWeaponDrawing(TEXT("COOP.DebugWeapons"), DebugWeaponDrawing, TEXT("Draw Debug Lines For Weapons"), ECVF_Cheat);
@@ -27,6 +28,22 @@ ASWeapon::ASWeapon()
 
 	MuzzleSocketName = "MuzzleSocket";
 	TracerTargetName = "BeamEnd";
+	BaseDamage = 20.f;
+	HeadshotMult = 3.0f;
+	FireRate = 0.25f;
+	LastTimeFired = 0.0f;
+}
+
+void ASWeapon::StartFire()
+{
+	float FirstDelay = FMath::Max(LastTimeFired + FireRate - GetWorld()->GetTimeSeconds(), 0.0f);
+
+	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ASWeapon::Fire, FireRate, true, FirstDelay);
+}
+
+void ASWeapon::StopFire()
+{
+	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 }
 
 // Ray traces to find targets hit by weapon and delivers damage to them
@@ -56,10 +73,16 @@ void ASWeapon::Fire() {
 
 			AActor* HitActor = Hit.GetActor();
 
-			UGameplayStatics::ApplyPointDamage(HitActor, 20.0f, ShotDirection, Hit, MyOwner->GetInstigatorController(), this, DamageType);
+			EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+			float DamageThisHit = BaseDamage;
+
+			if (SurfaceType == SURFACE_FLESHVULNERABLE) {
+				DamageThisHit *= HeadshotMult;
+			}
+
+			UGameplayStatics::ApplyPointDamage(HitActor, DamageThisHit, ShotDirection, Hit, MyOwner->GetInstigatorController(), this, DamageType);
 
 			// Finding impact effect to play
-			EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
 			UParticleSystem* SelectedEffect = nullptr;
 			switch (SurfaceType)
 			{
@@ -76,6 +99,8 @@ void ASWeapon::Fire() {
 			if (SelectedEffect) {
 				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 			}
+
+			LastTimeFired = GetWorld()->GetTimeSeconds();
 		}
 
 		if (DebugWeaponDrawing > 0) {

@@ -9,6 +9,7 @@
 class UCameraComponent;
 class USpringArmComponent;
 class ASWeapon;
+class UIHHealthComponent;
 
 UCLASS()
 class INEXORABLEHORDE_API ASCharacter : public ACharacter
@@ -29,11 +30,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USpringArmComponent* SpringArmComp = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UIHHealthComponent* HealthComp = nullptr;
+
 	void BeginCrouch();
 
 	void EndCrouch();
 
 	bool bWantsToZoom;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player")
+	bool bDied;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Camera")
 	float ZoomedFOV;
@@ -43,7 +50,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	ASWeapon* Weapon = nullptr;
 
-	void Fire();
+	void StartFire();
+
+	void StopFire();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<ASWeapon> StarterWeaponClass;
@@ -76,4 +85,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Camera", meta = (ClampMin = 0.1, ClampMax = 100))
 	float ZoomInterpSpeed;
+
+	UFUNCTION()
+	void OnHealthChanged(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 };

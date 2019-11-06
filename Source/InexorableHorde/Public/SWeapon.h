@@ -19,10 +19,13 @@ public:
 	// Sets default values for this actor's properties
 	ASWeapon();
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-		virtual void Fire();
+	void StartFire();
+
+	void StopFire();
 
 protected:
+
+	virtual void Fire();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent* MeshComp;
@@ -51,4 +54,17 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<UCameraShake> FireCamShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	float BaseDamage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	float HeadshotMult;
+
+	FTimerHandle TimerHandle_TimeBetweenShots;
+
+	float LastTimeFired;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	float FireRate;
 };

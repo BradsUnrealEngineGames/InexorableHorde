@@ -9,6 +9,9 @@
 #include "SWeapon.h"
 #include "Engine/World.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "InexorableHorde.h"
+#include "Components/IHHealthComponent.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -23,12 +26,17 @@ ASCharacter::ASCharacter()
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanJump = true;
 
+	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
+
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(FName("CameraComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	HealthComp = CreateDefaultSubobject<UIHHealthComponent>(FName("HealthComp"));
 
 	ZoomedFOV = 65;
 	ZoomInterpSpeed = 20.f;
 	WeaponAttachSocketName = "WeaponSocket";
+	bDied = false;
 }
 
 // Called when the game starts or when spawned
@@ -47,6 +55,8 @@ void ASCharacter::BeginPlay()
 		Weapon->SetOwner(this);
 		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
 	}
+
+	HealthComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
 }
 
 void ASCharacter::BeginCrouch() 
@@ -59,11 +69,19 @@ void ASCharacter::EndCrouch()
 	UnCrouch();
 }
 
-void ASCharacter::Fire() 
+void ASCharacter::StartFire() 
 {
 	if (Weapon)
 	{
-		Weapon->Fire();
+		Weapon->StartFire();
+	}
+}
+
+void ASCharacter::StopFire()
+{
+	if (Weapon)
+	{
+		Weapon->StopFire();
 	}
 }
 
@@ -102,7 +120,9 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &ASCharacter::EndZoom);
 
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASCharacter::Fire);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASCharacter::StartFire);
+
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASCharacter::StopFire);
 	
 }
 
@@ -126,10 +146,31 @@ FVector ASCharacter::GetPawnViewLocation() const
 	return Super::GetPawnViewLocation();
 }
 
-void ASCharacter::BeginZoom() {
+void ASCharacter::BeginZoom() 
+{
 	bWantsToZoom = true;
 }
 
-void ASCharacter::EndZoom() {
+void ASCharacter::EndZoom() 
+{
 	bWantsToZoom = false;
+}
+
+void ASCharacter::OnHealthChanged(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
+{
+	if (Health <= 0.0f && !bDied)
+	{
+		// Die!
+		bDied = true;
+
+		GetMovementComponent()->StopMovementImmediately();
+
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		DetachFromControllerPendingDestroy();
+
+		SetLifeSpan(10.0f);
+
+		Weapon->SetLifeSpan(10.0f);
+	}
 }

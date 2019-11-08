@@ -10,6 +10,7 @@
 #include "GameFramework/DamageType.h"
 #include "Particles/ParticleSystem.h"
 #include "GameFramework/Actor.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AExplosiveBarrel::AExplosiveBarrel()
@@ -30,7 +31,11 @@ AExplosiveBarrel::AExplosiveBarrel()
 	RadialForceComp->Radius = ExplosionRadius;
 
 	bUnexploded = true;
+
 	ExplosionDamage = 100;
+
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 // Called when the game starts or when spawned
@@ -42,33 +47,52 @@ void AExplosiveBarrel::BeginPlay()
 	{
 		HealthComp->OnHealthChanged.AddDynamic(this, &AExplosiveBarrel::OnHealthChanged);
 	}
-	
 }
 
 void AExplosiveBarrel::OnHealthChanged(UIHHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (Health <= 0 && bUnexploded)
 	{
-		bUnexploded = false;
 
-		// Change barrel material
-		if (MatExploded)
-		{
-			MeshComp->SetMaterial(0, MatExploded);
-		}
+		bUnexploded = false;	
 
-		// Spawn particle effect at barrel location
-		if (ExplosionSystem)
-		{
-			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionSystem, GetActorTransform());
-		}
+		// Pushing explosion effects to clients since this is only called from server
+		OnRep_bUnexploded();
 
-		// Use radial force component at barrel location
-		RadialForceComp->FireImpulse();
+		// Boost barrel upwards
+		FVector BoostIntensity = FVector::UpVector * RadialForceComp->ImpulseStrength;
+		MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
+
+		
 
 		// Apply radial damage
 		TArray<AActor*> Ignore;
 		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, ExplosionDamageType, Ignore, this);
 	}
+}
+
+void AExplosiveBarrel::OnRep_bUnexploded()
+{
+	// Change barrel material
+	if (MatExploded)
+	{
+		MeshComp->SetMaterial(0, MatExploded);
+	}
+
+	// Spawn particle effect at barrel location
+	if (ExplosionSystem)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionSystem, GetActorTransform());
+	}
+
+	// Use radial force component at barrel location
+	RadialForceComp->FireImpulse();
+}
+
+void AExplosiveBarrel::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AExplosiveBarrel, bUnexploded);
 }
 

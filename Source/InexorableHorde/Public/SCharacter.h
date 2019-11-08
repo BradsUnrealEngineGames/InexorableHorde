@@ -39,7 +39,7 @@ protected:
 
 	bool bWantsToZoom;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Player")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
 	bool bDied;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Camera")
@@ -47,7 +47,7 @@ protected:
 
 	float DefaultFOV;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	UPROPERTY(Replicated)
 	ASWeapon* Weapon = nullptr;
 
 	void StartFire();

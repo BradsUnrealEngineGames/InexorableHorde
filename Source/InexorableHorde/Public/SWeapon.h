@@ -9,6 +9,27 @@
 class USkeletalMeshComponent;
 class UDamageType;
 class UParticleSystem;
+class UCameraShake;
+
+
+// Contains information of a single hitscan weapon line trace
+USTRUCT()
+struct FHitScanTrace
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY()
+	float FireTime;
+
+	UPROPERTY()
+	TEnumAsByte<EPhysicalSurface> SurfaceType;
+
+	UPROPERTY()
+	FVector_NetQuantize TraceTo;
+
+};
 
 UCLASS()
 class INEXORABLEHORDE_API ASWeapon : public AActor
@@ -27,10 +48,17 @@ protected:
 
 	virtual void Fire();
 
+	void NewFunction(EPhysicalSurface SurfaceType, FHitResult& Hit);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent* MeshComp;
 
 	void PlayFireEffects(FVector TracerEndPoint);
+
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<UDamageType> DamageType;
@@ -67,4 +95,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	float FireRate;
+
+	UPROPERTY(ReplicatedUsing=OnRep_HitScanTrace)
+	FHitScanTrace HitScanTrace;
+
+	UFUNCTION()
+	void OnRep_HitScanTrace();
 };

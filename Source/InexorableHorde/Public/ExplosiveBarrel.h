@@ -55,8 +55,9 @@ protected:
 	UFUNCTION()
 	void OnHealthChanged(UIHHealthComponent* OwnerHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
+	UPROPERTY(ReplicatedUsing= OnRep_bUnexploded)
 	bool bUnexploded;
 
-public:	
-
+	UFUNCTION()
+	void OnRep_bUnexploded();
 };

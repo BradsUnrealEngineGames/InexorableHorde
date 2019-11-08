@@ -9,6 +9,7 @@
 #include "NavigationPath.h"
 #include "DrawDebugHelpers.h"
 #include "IHHealthComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
 AIHTrackerBot::AIHTrackerBot()
@@ -44,9 +45,17 @@ void AIHTrackerBot::HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float
 {
 	// Explode on hitpoints == 0
 
-	// @TODO Pulse the material on hit
 
-	UE_LOG(LogTemp, Log, TEXT("Health %s of %s"), *FString::SanitizeFloat(Health), *GetName())
+	// Assign material pointer if it has not been assigned
+	if (!MatInst)
+	{
+		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+	}
+	
+	if (MatInst)
+	{
+		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
+	}
 }
 
 FVector AIHTrackerBot::GetNextPathPoint()

@@ -44,6 +44,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Properties", meta = (ClampMin = 1, ClampMax = 1000))
 	float RequiredDistanceToTarget;
 
+	// Dynamic material to pulse on damage
+	UMaterialInstanceDynamic* MatInst = nullptr;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

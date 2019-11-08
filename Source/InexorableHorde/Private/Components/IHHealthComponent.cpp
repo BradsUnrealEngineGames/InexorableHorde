@@ -44,8 +44,6 @@ void UIHHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage,
 
 	Health = FMath::Clamp(Health - Damage, 0.0f, MaxHealth);
 
-	UE_LOG(LogTemp, Warning, TEXT("Took %f damage. New health: %f"), Damage, Health);
-
 	OnHealthChanged.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
 }
 

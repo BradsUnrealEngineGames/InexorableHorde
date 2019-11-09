@@ -7,6 +7,7 @@
 #include "IHTrackerBot.generated.h"
 
 class UIHHealthComponent;
+class USphereComponent;
 
 UCLASS()
 class INEXORABLEHORDE_API AIHTrackerBot : public APawn
@@ -24,8 +25,11 @@ protected:
 	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
 	UStaticMeshComponent* MeshComp = nullptr;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
 	UIHHealthComponent* HealthComp = nullptr;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
+	USphereComponent* OverlapSphereComp;
 
 	UFUNCTION()
 	void HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
@@ -47,7 +51,30 @@ protected:
 	// Dynamic material to pulse on damage
 	UMaterialInstanceDynamic* MatInst = nullptr;
 
+	void SelfDestruct();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Properties")
+	UParticleSystem* ExplosionEffect;
+
+	bool bExploded;
+
+	bool bStartedSelfDestruction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Properties", meta = (ClampMin = 1, ClampMax = 1000))
+	float ExplosionRadius;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Properties")
+	float ExplosionDamage;
+
+	FTimerHandle TimerHandle_SelfDamage;
+
+	void DamageSelf();
+	
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION()
+	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 };

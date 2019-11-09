@@ -10,11 +10,14 @@
 #include "DrawDebugHelpers.h"
 #include "IHHealthComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Components/SphereComponent.h"
+#include "SCharacter.h"
+#include "TimerManager.h"
 
 // Sets default values
 AIHTrackerBot::AIHTrackerBot()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
@@ -24,17 +27,27 @@ AIHTrackerBot::AIHTrackerBot()
 
 	HealthComp = CreateDefaultSubobject<UIHHealthComponent>(TEXT("HealthComp"));
 
+	OverlapSphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("OverlapSphereComp"));
+	OverlapSphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	OverlapSphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	OverlapSphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	OverlapSphereComp->SetupAttachment(RootComponent);
+	OverlapSphereComp->SetSphereRadius(150);
 
 	MovementForce = 1000;
 	bUseVelocityChange = false;
+	bExploded = false;
+	bStartedSelfDestruction = false;
 	RequiredDistanceToTarget = 100;
+	ExplosionRadius = 200;
+	ExplosionDamage = 100;
 }
 
 // Called when the game starts or when spawned
 void AIHTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	HealthComp->OnHealthChanged.AddDynamic(this, &AIHTrackerBot::HandleTakeDamage);
 
 	// Find initial move to
@@ -44,14 +57,17 @@ void AIHTrackerBot::BeginPlay()
 void AIHTrackerBot::HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
 	// Explode on hitpoints == 0
-
+	if (Health <= 0.0f)
+	{
+		SelfDestruct();
+	}
 
 	// Assign material pointer if it has not been assigned
 	if (!MatInst)
 	{
 		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
 	}
-	
+
 	if (MatInst)
 	{
 		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
@@ -64,7 +80,7 @@ FVector AIHTrackerBot::GetNextPathPoint()
 	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
 
 	UNavigationPath* NavPath = UNavigationSystemV1::FindPathToActorSynchronously(this, GetActorLocation(), PlayerPawn);
-	
+
 	if (NavPath->PathPoints.Num() > 1)
 	{
 		return NavPath->PathPoints[1];
@@ -72,6 +88,52 @@ FVector AIHTrackerBot::GetNextPathPoint()
 
 	// Failed to find path
 	return GetActorLocation();
+}
+
+void AIHTrackerBot::SelfDestruct()
+{
+	if (bExploded)
+	{
+		return;
+	}
+	bExploded = true;
+
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(this);
+
+	// Apply Damage!
+	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Yellow, false, 4.0f, 0, 1.0f);
+
+	// Delete actor immediately
+	Destroy();
+}
+
+void AIHTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorBeginOverlap(OtherActor);
+
+	ASCharacter* PlayerPawn = Cast<ASCharacter>(OtherActor);
+	if (!bStartedSelfDestruction)
+	{
+		if (PlayerPawn)
+		{
+			// We overlapped with a player!
+
+			// Start self destruction sequence
+			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &AIHTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+
+			bStartedSelfDestruction = true;
+		}
+	}
+}
+
+void AIHTrackerBot::DamageSelf()
+{
+	UGameplayStatics::ApplyDamage(this, 20, GetInstigatorController(), this, nullptr);
 }
 
 // Called every frame

@@ -12,6 +12,7 @@ class URadialForceComponent;
 class UMaterial;
 class UParticleSystem;
 class UDamageType;
+class USoundCue;
 
 UCLASS()
 class INEXORABLEHORDE_API AExplosiveBarrel : public AActor
@@ -44,12 +45,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<UDamageType> ExplosionDamageType;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Extras")
+	UPROPERTY(EditDefaultsOnly, Category = "Extras")
 	float ExplosionDamage;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Extras")
+	UPROPERTY(EditDefaultsOnly, Category = "Extras")
 	float ExplosionRadius;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Extras")
+	USoundCue* ExplosionSound;
 
 
 	UFUNCTION()

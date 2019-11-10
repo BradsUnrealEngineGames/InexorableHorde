@@ -11,6 +11,7 @@
 #include "Particles/ParticleSystem.h"
 #include "GameFramework/Actor.h"
 #include "Net/UnrealNetwork.h"
+#include "Sound/SoundCue.h"
 
 // Sets default values
 AExplosiveBarrel::AExplosiveBarrel()
@@ -57,14 +58,8 @@ void AExplosiveBarrel::OnHealthChanged(UIHHealthComponent* OwnerHealthComp, floa
 
 		bUnexploded = false;	
 
-		// Pushing explosion effects to clients since this is only called from server
-		OnRep_bUnexploded();
-
-		// Boost barrel upwards
-		FVector BoostIntensity = FVector::UpVector * RadialForceComp->ImpulseStrength;
-		MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
-
-		
+		// Pushing explosion effects to clients since this is only called from server (for some reason this isn't automatically called even though it should be)
+		OnRep_bUnexploded();	
 
 		// Apply radial damage
 		TArray<AActor*> Ignore;
@@ -88,6 +83,16 @@ void AExplosiveBarrel::OnRep_bUnexploded()
 
 	// Use radial force component at barrel location
 	RadialForceComp->FireImpulse();
+
+	// Boost barrel upwards
+	FVector BoostIntensity = FVector::UpVector * RadialForceComp->ImpulseStrength;
+	MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
+
+	// Play explosion sound
+	if (ExplosionSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation(), 2.0f);
+	}
 }
 
 void AExplosiveBarrel::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

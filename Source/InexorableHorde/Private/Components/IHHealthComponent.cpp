@@ -38,6 +38,11 @@ void UIHHealthComponent::BeginPlay()
 	
 }
 
+void UIHHealthComponent::OnRep_Health(float OldHealth)
+{
+	OnHealthChanged.Broadcast(this, Health, OldHealth - Health, nullptr, nullptr, nullptr);
+}
+
 void UIHHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (Damage <= 0.0f) { return; }

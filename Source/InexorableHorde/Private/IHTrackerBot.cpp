@@ -13,6 +13,7 @@
 #include "Components/SphereComponent.h"
 #include "SCharacter.h"
 #include "TimerManager.h"
+#include "Sound/SoundCue.h"
 
 // Sets default values
 AIHTrackerBot::AIHTrackerBot()
@@ -32,7 +33,7 @@ AIHTrackerBot::AIHTrackerBot()
 	OverlapSphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
 	OverlapSphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	OverlapSphereComp->SetupAttachment(RootComponent);
-	OverlapSphereComp->SetSphereRadius(150);
+	OverlapSphereComp->SetSphereRadius(200);
 
 	MovementForce = 1000;
 	bUseVelocityChange = false;
@@ -50,8 +51,11 @@ void AIHTrackerBot::BeginPlay()
 
 	HealthComp->OnHealthChanged.AddDynamic(this, &AIHTrackerBot::HandleTakeDamage);
 
-	// Find initial move to
-	NextPathPoint = GetNextPathPoint();
+	if (Role == ROLE_Authority)
+	{
+		// Find initial move to
+		NextPathPoint = GetNextPathPoint();
+	}
 }
 
 void AIHTrackerBot::HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
@@ -98,18 +102,36 @@ void AIHTrackerBot::SelfDestruct()
 	}
 	bExploded = true;
 
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+	// Play explosion visuals
+	if (ExplosionEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+	}
 
-	TArray<AActor*> IgnoredActors;
-	IgnoredActors.Add(this);
+	// Spawn debug sphere
+	//DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Yellow, false, 4.0f, 0, 1.0f);
 
-	// Apply Damage!
-	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+	// Play explosion sound
+	if (ExplosionSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
+	}
 
-	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Yellow, false, 4.0f, 0, 1.0f);
+	MeshComp->SetVisibility(false, true);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// Delete actor immediately
-	Destroy();
+	// Implement server only functionality
+	if (Role == ROLE_Authority)
+	{
+		TArray<AActor*> IgnoredActors;
+		IgnoredActors.Add(this);
+
+		// Apply Damage!
+		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+		// Delete Actor after set time
+		SetLifeSpan(0.5f);
+	}
 }
 
 void AIHTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
@@ -117,16 +139,24 @@ void AIHTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 	Super::NotifyActorBeginOverlap(OtherActor);
 
 	ASCharacter* PlayerPawn = Cast<ASCharacter>(OtherActor);
-	if (!bStartedSelfDestruction)
+	if (!bStartedSelfDestruction && !bExploded)
 	{
 		if (PlayerPawn)
 		{
 			// We overlapped with a player!
-
-			// Start self destruction sequence
-			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &AIHTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+			if (Role == ROLE_Authority)
+			{
+				// Start self destruction sequence
+				GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &AIHTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+			}
 
 			bStartedSelfDestruction = true;
+
+			if (SelfDestructSound)
+			{
+				UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
+			}
+		
 		}
 	}
 }
@@ -140,6 +170,8 @@ void AIHTrackerBot::DamageSelf()
 void AIHTrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// Cancel if on client. Only server should be doing these calculations.
+	if (Role != ROLE_Authority || bExploded) { return; }
 
 	float DistanceToTarget = (GetActorLocation() - NextPathPoint).Size();
 
@@ -157,8 +189,8 @@ void AIHTrackerBot::Tick(float DeltaTime)
 
 		MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
 
-		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0.0f, 0, 1.0f);
+		//DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0.0f, 0, 1.0f);
 	}
 
-	DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0.0f);
+	//DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0.0f);
 }

@@ -8,6 +8,7 @@
 
 class UIHHealthComponent;
 class USphereComponent;
+class USoundCue;
 
 UCLASS()
 class INEXORABLEHORDE_API AIHTrackerBot : public APawn
@@ -54,7 +55,7 @@ protected:
 	void SelfDestruct();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Properties")
-	UParticleSystem* ExplosionEffect;
+	UParticleSystem* ExplosionEffect = nullptr;
 
 	bool bExploded;
 
@@ -69,7 +70,12 @@ protected:
 	FTimerHandle TimerHandle_SelfDamage;
 
 	void DamageSelf();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Properties")
+	USoundCue* SelfDestructSound = nullptr;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Properties")
+	USoundCue* ExplosionSound = nullptr;
 
 public:	
 	// Called every frame

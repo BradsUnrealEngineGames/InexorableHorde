@@ -30,10 +30,13 @@ protected:
 	UIHHealthComponent* HealthComp = nullptr;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Components")
-	USphereComponent* OverlapSphereComp;
+	USphereComponent* OverlapSphereComp = nullptr;
 
 	UFUNCTION()
 	void HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	UFUNCTION()
+	void SmallSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	FVector GetNextPathPoint();
 
@@ -71,16 +74,20 @@ protected:
 
 	void DamageSelf();
 
+	FTimerHandle TimerHandle_SwarmCheck;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Properties")
 	USoundCue* SelfDestructSound = nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Properties")
 	USoundCue* ExplosionSound = nullptr;
 
+	UFUNCTION()
+	void OnCheckNearbyBots();
+
+	int32 PowerLevel;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	UFUNCTION()
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 };

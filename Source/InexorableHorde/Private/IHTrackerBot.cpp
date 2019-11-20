@@ -15,6 +15,7 @@
 #include "TimerManager.h"
 #include "Sound/SoundCue.h"
 
+
 // Sets default values
 AIHTrackerBot::AIHTrackerBot()
 {
@@ -56,6 +57,12 @@ void AIHTrackerBot::BeginPlay()
 		// Find initial move to
 		NextPathPoint = GetNextPathPoint();
 	}
+
+	OverlapSphereComp->OnComponentBeginOverlap.AddDynamic(this, &AIHTrackerBot::SmallSphereOverlap);
+
+	// Every second we update our power level based on nearby bots
+	FTimerHandle TimerHandle_CheckPowerLevel;
+	GetWorldTimerManager().SetTimer(TimerHandle_CheckPowerLevel, this, &AIHTrackerBot::OnCheckNearbyBots, 1.0f, true);
 }
 
 void AIHTrackerBot::HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
@@ -75,6 +82,31 @@ void AIHTrackerBot::HandleTakeDamage(UIHHealthComponent* OwningHealthComp, float
 	if (MatInst)
 	{
 		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
+	}
+}
+
+void AIHTrackerBot::SmallSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	ASCharacter* PlayerPawn = Cast<ASCharacter>(OtherActor);
+	if (!bStartedSelfDestruction && !bExploded)
+	{
+		if (PlayerPawn)
+		{
+			// We overlapped with a player!
+			if (Role == ROLE_Authority)
+			{
+				// Start self destruction sequence
+				GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &AIHTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+			}
+
+			bStartedSelfDestruction = true;
+
+			if (SelfDestructSound)
+			{
+				UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
+			}
+
+		}
 	}
 }
 
@@ -118,6 +150,7 @@ void AIHTrackerBot::SelfDestruct()
 	}
 
 	MeshComp->SetVisibility(false, true);
+	MeshComp->SetSimulatePhysics(false);
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Implement server only functionality
@@ -127,43 +160,71 @@ void AIHTrackerBot::SelfDestruct()
 		IgnoredActors.Add(this);
 
 		// Apply Damage!
-		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+		float FinalDamage = ExplosionDamage + (ExplosionDamage * 0.2 * PowerLevel);
+
+		UGameplayStatics::ApplyRadialDamage(this, FinalDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
 
 		// Delete Actor after set time
 		SetLifeSpan(0.5f);
 	}
 }
 
-void AIHTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
-{
-	Super::NotifyActorBeginOverlap(OtherActor);
-
-	ASCharacter* PlayerPawn = Cast<ASCharacter>(OtherActor);
-	if (!bStartedSelfDestruction && !bExploded)
-	{
-		if (PlayerPawn)
-		{
-			// We overlapped with a player!
-			if (Role == ROLE_Authority)
-			{
-				// Start self destruction sequence
-				GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &AIHTrackerBot::DamageSelf, 0.5f, true, 0.0f);
-			}
-
-			bStartedSelfDestruction = true;
-
-			if (SelfDestructSound)
-			{
-				UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
-			}
-		
-		}
-	}
-}
-
 void AIHTrackerBot::DamageSelf()
 {
 	UGameplayStatics::ApplyDamage(this, 20, GetInstigatorController(), this, nullptr);
+}
+
+void AIHTrackerBot::OnCheckNearbyBots()
+{
+	// distance to check for nearby bots
+	const float Radius = 600;
+
+	// Create temporary collision shape for overlaps
+	FCollisionShape CollShape;
+	CollShape.SetSphere(Radius);
+
+	// Only find Pawns (eg. players and AI bots)
+	FCollisionObjectQueryParams QueryParams;
+	// Our tracker bot's mesh component is set to Physics Body in Blueprint (default profile of physics simulated actors)
+	QueryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
+	QueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	TArray<FOverlapResult> Overlaps;
+	GetWorld()->OverlapMultiByObjectType(Overlaps, GetActorLocation(), FQuat::Identity, QueryParams, CollShape);
+
+	DrawDebugSphere(GetWorld(), GetActorLocation(), Radius, 12, FColor::White, false, 1.0f);
+
+	int32 NrOfBots = 0;
+	// loop over the results using a "range based for loop"
+	for (FOverlapResult Result : Overlaps)
+	{
+		// Check if we overlapped with another tracker bot (ignoring players and other bot types)
+		AIHTrackerBot* Bot = Cast<AIHTrackerBot>(Result.GetActor());
+		// Ignore this trackerbot instance
+		if (Bot && Bot != this)
+		{
+			NrOfBots++;
+		}
+	}
+
+	const int32 MaxPowerLevel = 4;
+
+	// Clamp between min=0 and max = 4
+	PowerLevel = FMath::Clamp(NrOfBots, 0, MaxPowerLevel);
+
+	// Update material color
+	if (MatInst == nullptr)
+	{
+		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+	}
+	if (MatInst)
+	{
+		float Alpha = PowerLevel / (float)MaxPowerLevel;
+
+		MatInst->SetScalarParameterValue("PowerLevelAlpha", Alpha);
+	}
+
+	DrawDebugString(GetWorld(), FVector(0), FString::FromInt(PowerLevel), this, FColor::White, 1.0f, true);
 }
 
 // Called every frame

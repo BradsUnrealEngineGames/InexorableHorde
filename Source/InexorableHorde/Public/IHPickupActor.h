@@ -8,6 +8,7 @@
 
 class USphereComponent;
 class UDecalComponent;
+class AIHPowerupActor;
 
 UCLASS()
 class INEXORABLEHORDE_API AIHPickupActor : public AActor
@@ -27,6 +28,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UDecalComponent* DecalComp;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	TSubclassOf<AIHPowerupActor> PowerupClass;
+
+	AIHPowerupActor* PowerupInstance;
+
+	void Respawn();
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float CooldownDuration;
+
+	FTimerHandle TimerHandle_PowerupRespawn;
 
 public:
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;

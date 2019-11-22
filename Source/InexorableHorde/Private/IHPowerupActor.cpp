@@ -26,7 +26,7 @@ void AIHPowerupActor::OnTickPowerup()
 
 	OnPowerupTicked();
 
-	if (TotalNumberOfTicks >= TicksProcessed)
+	if (TotalNumberOfTicks <= TicksProcessed)
 	{
 		OnExpired();
 

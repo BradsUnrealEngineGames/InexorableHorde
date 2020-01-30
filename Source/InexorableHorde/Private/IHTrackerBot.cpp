@@ -114,10 +114,10 @@ FVector AIHTrackerBot::GetNextPathPoint()
 {
 	// Shortcut to get player location
 	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
-	if (!PlayerPawn) { return; }
+	if (!PlayerPawn) { return FVector(0,0,0); }
 
 	UNavigationPath* NavPath = UNavigationSystemV1::FindPathToActorSynchronously(this, GetActorLocation(), PlayerPawn);
-	if (!NavPath) { return; }
+	if (!NavPath) { return FVector(0,0,0); }
 
 	if (NavPath->PathPoints.Num() > 1)
 	{
@@ -247,6 +247,7 @@ void AIHTrackerBot::Tick(float DeltaTime)
 		// Keep moving toward next target
 		FVector ForceDirection = NextPathPoint - GetActorLocation();
 		ForceDirection.GetSafeNormal();
+		ForceDirection.Z = 0;
 
 		ForceDirection *= MovementForce;
 

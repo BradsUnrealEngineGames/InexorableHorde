@@ -59,6 +59,11 @@ void UIHHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UIHHealthComponent, Health);
 }
 
+float UIHHealthComponent::GetHealth() const
+{
+	return Health;
+}
+
 void UIHHealthComponent::Heal(float HealAmount)
 {
 	if (HealAmount <= 0.0f || Health <= 0.0f)

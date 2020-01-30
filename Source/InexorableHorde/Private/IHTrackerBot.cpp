@@ -114,8 +114,10 @@ FVector AIHTrackerBot::GetNextPathPoint()
 {
 	// Shortcut to get player location
 	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
+	if (!PlayerPawn) { return; }
 
 	UNavigationPath* NavPath = UNavigationSystemV1::FindPathToActorSynchronously(this, GetActorLocation(), PlayerPawn);
+	if (!NavPath) { return; }
 
 	if (NavPath->PathPoints.Num() > 1)
 	{

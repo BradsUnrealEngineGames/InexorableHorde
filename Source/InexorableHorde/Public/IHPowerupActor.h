@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "IHPowerupActor.generated.h"
 
+class ASCharacter;
+
 UCLASS()
 class INEXORABLEHORDE_API AIHPowerupActor : public AActor
 {
@@ -16,8 +18,6 @@ public:
 	AIHPowerupActor();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 
 	/* Time between powerup ticks */
 	UPROPERTY(EditDefaultsOnly, Category = "Powerups")
@@ -33,15 +33,25 @@ protected:
 
 	UFUNCTION()
 	void OnTickPowerup();
-public:
-	void ActivatePowerup();
+
+	UPROPERTY(ReplicatedUsing = OnRep_PowerupActive)
+	bool IsPowerupActive;
+
+	UFUNCTION()
+	void OnRep_PowerupActive();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
-	void OnActivated();
+	void OnPowerupStateChanged(bool NewIsActive);
+public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
 	void OnPowerupTicked();
-	
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
+	void OnActivated(ASCharacter* ActivatingCharacter);
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
 	void OnExpired();
+
+	void ActivatePowerup(ASCharacter* ActivatingCharacter);
 };

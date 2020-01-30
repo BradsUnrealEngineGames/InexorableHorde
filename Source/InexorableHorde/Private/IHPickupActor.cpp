@@ -6,6 +6,7 @@
 #include "Components/DecalComponent.h"
 #include "IHPowerupActor.h"
 #include "TimerManager.h"
+#include "SCharacter.h"
 
 // Sets default values
 AIHPickupActor::AIHPickupActor()
@@ -20,6 +21,8 @@ AIHPickupActor::AIHPickupActor()
 	DecalComp->SetupAttachment(RootComponent);
 
 	CooldownDuration = 10.0f;
+
+	SetReplicates(true);
 }
 
 // Called when the game starts or when spawned
@@ -27,7 +30,10 @@ void AIHPickupActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	Respawn();
+	if (Role == ROLE_Authority)
+	{
+		Respawn();
+	}
 }
 
 void AIHPickupActor::Respawn()
@@ -47,10 +53,10 @@ void AIHPickupActor::Respawn()
 void AIHPickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
-
-	if (PowerupInstance)
+	ASCharacter* ActivatingCharacter = Cast<ASCharacter>(OtherActor);
+	if (Role == ROLE_Authority && PowerupInstance && ActivatingCharacter)
 	{
-		PowerupInstance->ActivatePowerup();
+		PowerupInstance->ActivatePowerup(ActivatingCharacter);
 		PowerupInstance = nullptr;
 
 		// Set Timer to respawn

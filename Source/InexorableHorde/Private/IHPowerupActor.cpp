@@ -3,6 +3,8 @@
 
 #include "IHPowerupActor.h"
 #include "TimerManager.h"
+#include "Net/UnrealNetwork.h"
+#include "SCharacter.h"
 
 // Sets default values
 AIHPowerupActor::AIHPowerupActor()
@@ -10,18 +12,14 @@ AIHPowerupActor::AIHPowerupActor()
 	PowerupInterval = 0.0f;
 	TotalNumberOfTicks = 0;
 	TicksProcessed = 0;
-}
 
-// Called when the game starts or when spawned
-void AIHPowerupActor::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	
+	SetReplicates(true);
 }
 
 void AIHPowerupActor::OnTickPowerup()
 {
+	if (Role != ROLE_Authority) { return; }
+
 	TicksProcessed++;
 
 	OnPowerupTicked();
@@ -34,10 +32,17 @@ void AIHPowerupActor::OnTickPowerup()
 	}
 }
 
-void AIHPowerupActor::ActivatePowerup()
+void AIHPowerupActor::OnRep_PowerupActive()
 {
+	OnPowerupStateChanged(IsPowerupActive);
+}
 
-	OnActivated();
+void AIHPowerupActor::ActivatePowerup(ASCharacter* ActivatingCharacter)
+{
+	IsPowerupActive = true;
+	OnRep_PowerupActive();
+
+	OnActivated(ActivatingCharacter);
 
 	if (PowerupInterval > 0.0f)
 	{
@@ -47,4 +52,11 @@ void AIHPowerupActor::ActivatePowerup()
 	{
 		OnTickPowerup();
 	}
+}
+
+void AIHPowerupActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AIHPowerupActor, IsPowerupActive);
 }

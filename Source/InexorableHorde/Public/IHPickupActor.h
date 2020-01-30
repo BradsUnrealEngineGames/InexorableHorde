@@ -29,7 +29,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UDecalComponent* DecalComp;
 
-	UPROPERTY(EditAnywhere, Category = "Properties")
+	UPROPERTY(EditInstanceOnly, Category = "Properties")
 	TSubclassOf<AIHPowerupActor> PowerupClass;
 
 	AIHPowerupActor* PowerupInstance;
